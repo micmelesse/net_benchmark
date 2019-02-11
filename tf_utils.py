@@ -34,7 +34,8 @@ def create_comparison_plot(scalar_name,A_event_acc,A_label,B_events_acc,B_label)
     
     B_steps=get_steps(B_events_acc,scalar_name)
     B_vals=tensorboard_smooth(get_val(B_events_acc,scalar_name))
-     
+    
+    plt.figure()
     plt.gca().set_aspect("auto")
     plt.xlabel("steps")
     plt.ylabel(scalar_name)
