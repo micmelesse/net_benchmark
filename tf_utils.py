@@ -1,6 +1,15 @@
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 import matplotlib.pyplot as plt
 import os
+import math
+import random
+import numpy as np
+import pandas as pd
+from IPython.display import display, HTML
+from tqdm import tqdm
+from natsort import natsorted
+from protobuf_to_dict import protobuf_to_dict
+from tensorflow.python.client import timeline
 
 
 def get_event_acc(log_dir):
@@ -67,3 +76,164 @@ def save_fig(fig, scalar_name, dir_name):
 
     plt.savefig(dir_name + "/" + scalar_name.replace('/', '--') +
                 "_plot.png", dpi=300)
+
+
+def get_step_gpu_stats(step_metadata):
+    step_metadata = protobuf_to_dict(step_metadata)
+    step_stats = step_metadata['step_stats']
+    dev_stats = step_stats["dev_stats"]
+    for d in dev_stats:
+        device = d["device"]
+        node_stats = d["node_stats"]
+        if device == "/job:localhost/replica:0/task:0/device:GPU:0":
+            ret = pd.DataFrame(node_stats)
+#     print(ret.shape)
+    return ret
+
+
+def get_op_time(node):
+    try:
+        return node["all_end_rel_micros"]
+    except:
+        return np.NaN
+
+
+def get_op_mem(node):
+    try:
+        return node["memory"][0]["live_bytes"]/1024.0/1024.0
+    except:
+        return np.NaN
+
+
+def get_timeline_from_metadata(run_metadata, file_name):
+    fetched_timeline = timeline.Timeline(run_metadata.step_stats)
+    chrome_trace = fetched_timeline.generate_chrome_trace_format()
+    with open(file_name+".json", 'w') as f:
+        f.write(chrome_trace)
+
+
+def collect_nodes(node_name, node_steps):
+    ret = []
+    for n in node_steps:
+        if n["node_name"] == node_name:
+            ret.append(n)
+#     print(len(ret))
+    return ret
+
+
+def get_common_nodes(A_metrics, B_metrics):
+    A_nodes = pd.DataFrame(A_metrics["Node Name"].unique())
+    B_nodes = pd.DataFrame(B_metrics["Node Name"].unique())
+    common_nodes = pd.merge(A_nodes, B_nodes)
+    return common_nodes
+
+
+def group_nodes(gpu_stats):
+    ret = gpu_stats.groupby("node_name").aggregate(lambda x: list(x))
+#     print(ret.shape)
+    return ret
+
+
+def extract_metrics(gpu_node_stats):
+    metrics = []
+    for i, n in gpu_node_stats.iterrows():
+        metrics.append([n.name, get_op_mem(n), get_op_time(n)])
+    metrics_pd = pd.DataFrame(metrics)
+    metrics_pd.columns = ["Node Name", "Memory", "Time"]
+    metrics_pd.set_index("Node Name", inplace=True)
+#     print(metrics_pd.shape)
+    return metrics_pd
+
+
+def splitup_gpu_stats(gpu_stats_grouped):
+    gpu_stats_grouped_encoder = gpu_stats_grouped.filter(
+        regex='^dynamic_seq2seq/encoder', axis=0)
+    gpu_stats_grouped_attention = gpu_stats_grouped.filter(
+        regex='^dynamic_seq2seq/decoder/BahdanauAttention', axis=0)
+    gpu_stats_grouped_decoder = gpu_stats_grouped.filter(
+        regex='^dynamic_seq2seq/decoder/decoder', axis=0)
+#     print(gpu_stats_grouped_encoder.shape,gpu_stats_grouped_attention.shape,gpu_stats_grouped_decoder.shape)
+    return gpu_stats_grouped_encoder, gpu_stats_grouped_attention, gpu_stats_grouped_decoder
+
+
+def scalarify(df):
+    return df.applymap(lambda x: x[0] if len(x) == 1 else None)
+
+
+def filter_nodes(gpu_stats_grouped, regex):
+    gpu_stats_grouped_fitlered = gpu_stats_grouped.filter(regex=regex, axis=0)
+#     print(gpu_stats_grouped_fitlered.shape)
+    return gpu_stats_grouped_fitlered
+
+
+def process_log(log_dir, regex, max_step=float("inf")):
+    log_dir = os.path.expanduser(log_dir)
+    gpu_manufacturer = os.path.normpath(log_dir).split(os.sep)[
+        2].split("_")[-1]
+    net_module = os.path.basename(regex)
+    filename = "{}_{}.pickle".format(gpu_manufacturer, net_module)
+    if os.path.isfile(filename):
+        return pd.read_pickle(filename)
+
+    event_acc = get_event_acc(log_dir)
+    metadata_list = natsorted(event_acc.Tags()["run_metadata"])
+
+    df_dict = {}
+    for i, step_id in enumerate(tqdm(metadata_list)):
+        step_metadata = event_acc.RunMetadata(step_id)
+        step_gpu_stats_all = get_step_gpu_stats(step_metadata)
+        step_gpu_stats_grouped = group_nodes(step_gpu_stats_all)
+        step_gpu_stats_grouped_filtered = filter_nodes(
+            step_gpu_stats_grouped, regex)
+        df_dict[step_id] = scalarify(step_gpu_stats_grouped_filtered)
+        if i >= max_step:
+            break
+
+    ret = pd.Panel(df_dict)
+    ret.to_pickle(filename)
+    return ret
+
+
+def plot_bar_compare(A_data, A_label, B_data, B_label, filename=None, metric="Time", top_n=-1):
+    def get_mean_and_std(data):
+        ret = data['step 1':'step 100', :, "all_end_rel_micros"]
+        ret_mean = ret.mean(axis=1)
+        ret_std = ret.std(axis=1)
+        return ret_mean, ret_std
+
+    A_mean, A_std = get_mean_and_std(A_data)
+    B_mean, B_std = get_mean_and_std(B_data)
+
+    data = pd.DataFrame()
+    data[A_label+"_mean"] = A_mean
+    data[B_label+"_mean"] = B_mean
+    data[A_label+"_std"] = A_std
+    data[B_label+"_std"] = B_std
+    data = data.dropna()
+    data["diff"] = data[A_label+"_mean"]-data[B_label+"_mean"]
+    data = data.sort_values("diff")
+#     data=data.sample(n=top_n,random_state=random.randint(0,2**32 - 1))
+    data = data.head(top_n)
+    display(data)
+
+    ind = np.arange(len(data.index))
+    width = 0.4  # the width of the bars
+
+    plt.figure(figsize=(16, 9))
+    ax = plt.gca()
+    ax.barh(ind - width/2, data[A_label+"_mean"], width,
+            color='Red', label=A_label, xerr=data[A_label+"_std"])
+    ax.barh(ind + width/2,  data[B_label+"_mean"], width,
+            color='Green', label=B_label, xerr=data[B_label+"_std"])
+    ax.legend()
+    ax.invert_yaxis()
+    plt.yticks(ind, data.index.tolist(), rotation='horizontal', fontsize=10)
+    plt.title(u"Time in {}s".format(u"\u03BC"))
+    plt.tight_layout()
+
+    return plt.gcf()
+
+    # if filename:
+    #     plt.savefig("figures/{}".format(filename),dpi=2*fig.dpi)
+    # else:
+    #     plt.savefig("figures/bar",dpi=fig.dpi)
