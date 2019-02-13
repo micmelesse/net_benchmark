@@ -166,37 +166,42 @@ def filter_nodes(gpu_stats_grouped, regex):
     return gpu_stats_grouped_fitlered
 
 
-def process_log(log_dir, regex, max_step=float("inf")):
+def process_log(log_dir, regex, max_step=None):
     log_dir = os.path.expanduser(log_dir)
-    gpu_manufacturer = os.path.normpath(log_dir).split(os.sep)[
-        2].split("_")[-1]
-    net_module = os.path.basename(regex)
-    filename = "{}_{}.pickle".format(gpu_manufacturer, net_module)
-    if os.path.isfile(filename):
-        return pd.read_pickle(filename)
+    # gpu_manufacturer = os.path.normpath(log_dir).split(os.sep)[
+    #     2].split("_")[-1]
+    # net_module = os.path.basename(regex)
+    # filename = "{}_{}.pickle".format(gpu_manufacturer, net_module)
+    # if os.path.isfile(filename):
+    #     print("reading cached processed log")
+    #     return pd.read_pickle(filename)
 
     event_acc = get_event_acc(log_dir)
-    metadata_list = natsorted(event_acc.Tags()["run_metadata"])
+
+    if max_step:
+        metadata_list = natsorted(event_acc.Tags()["run_metadata"])[:max_step]
+    else:
+        metadata_list = natsorted(event_acc.Tags()["run_metadata"])
 
     df_dict = {}
-    for i, step_id in enumerate(tqdm(metadata_list)):
+    for step_id in tqdm(metadata_list):
         step_metadata = event_acc.RunMetadata(step_id)
         step_gpu_stats_all = get_step_gpu_stats(step_metadata)
         step_gpu_stats_grouped = group_nodes(step_gpu_stats_all)
         step_gpu_stats_grouped_filtered = filter_nodes(
             step_gpu_stats_grouped, regex)
         df_dict[step_id] = scalarify(step_gpu_stats_grouped_filtered)
-        if i >= max_step:
-            break
 
     ret = pd.Panel(df_dict)
-    ret.to_pickle(filename)
+    # ret.to_pickle(filename)
     return ret
 
 
 def plot_bar_compare(A_data, A_label, B_data, B_label, filename=None, metric="Time", top_n=-1):
+    min_steps = A_data.shape[0] if A_data.shape[0] <= B_data.shape[0] else B_data.shape[0]
+
     def get_mean_and_std(data):
-        ret = data['step 1':'step 100', :, "all_end_rel_micros"]
+        ret = (data[:, :, "all_end_rel_micros"]).iloc[0:min_steps, :]
         ret_mean = ret.mean(axis=1)
         ret_std = ret.std(axis=1)
         return ret_mean, ret_std
@@ -214,7 +219,6 @@ def plot_bar_compare(A_data, A_label, B_data, B_label, filename=None, metric="Ti
     data = data.sort_values("diff")
 #     data=data.sample(n=top_n,random_state=random.randint(0,2**32 - 1))
     data = data.head(top_n)
-    display(data)
 
     ind = np.arange(len(data.index))
     width = 0.4  # the width of the bars
@@ -231,7 +235,7 @@ def plot_bar_compare(A_data, A_label, B_data, B_label, filename=None, metric="Ti
     plt.title(u"Time in {}s".format(u"\u03BC"))
     plt.tight_layout()
 
-    return plt.gcf()
+    return (plt.gcf(),data)
 
     # if filename:
     #     plt.savefig("figures/{}".format(filename),dpi=2*fig.dpi)
