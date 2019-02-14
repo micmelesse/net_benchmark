@@ -14,7 +14,7 @@ from functools import lru_cache
 
 
 def get_event_acc(log_dir):
-    event_acc = EventAccumulator(log_dir)
+    event_acc = EventAccumulator(os.path.expanduser(log_dir))
     event_acc.Reload()
     return event_acc
 
@@ -168,10 +168,10 @@ def filter_nodes(gpu_stats_grouped, regex):
 
 
 @lru_cache(maxsize=32)
-def process_log(log_dir, regex, max_step=None):
-    log_dir = os.path.expanduser(log_dir)
-
-    event_acc = get_event_acc(log_dir)
+def process_metadata(event_acc, regex, max_step=None):
+    if not event_acc.Tags()["run_metadata"]:
+        print("no metadata")
+        return
 
     if max_step:
         metadata_list = natsorted(event_acc.Tags()["run_metadata"])[:max_step]
