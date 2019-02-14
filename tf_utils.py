@@ -68,14 +68,14 @@ def create_comparison_plot(scalar_name, A_event_acc, A_label, B_events_acc, B_la
     return plt.gcf()
 
 
-def save_fig(fig, scalar_name, dir_name):
+def save_fig(fig, fig_name, dir_name):
     dir_name = "figures/" + dir_name
 
     if not os.path.exists(dir_name):
         os.makedirs(dir_name)
 
-    plt.savefig(dir_name + "/" + scalar_name.replace('/', '--') +
-                "_plot.png", dpi=300)
+    plt.savefig(dir_name + "/" + fig_name.replace('/', '--') +
+                ".png", dpi=fig.dpi)
 
 
 def get_step_gpu_stats(step_metadata):
