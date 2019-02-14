@@ -166,7 +166,8 @@ def filter_nodes(gpu_stats_grouped, regex):
 #     print(gpu_stats_grouped_fitlered.shape)
     return gpu_stats_grouped_fitlered
 
-@lru_cache
+
+@lru_cache(maxsize=32)
 def process_log(log_dir, regex, max_step=None):
     log_dir = os.path.expanduser(log_dir)
 
@@ -187,7 +188,6 @@ def process_log(log_dir, regex, max_step=None):
         df_dict[step_id] = scalarify(step_gpu_stats_grouped_filtered)
 
     ret = pd.Panel(df_dict)
-    # ret.to_pickle(filename)
     return ret
 
 
@@ -229,9 +229,4 @@ def plot_bar_compare(A_data, A_label, B_data, B_label, filename=None, metric="Ti
     plt.title(u"Time in {}s".format(u"\u03BC"))
     plt.tight_layout()
 
-    return (plt.gcf(),data)
-
-    # if filename:
-    #     plt.savefig("figures/{}".format(filename),dpi=2*fig.dpi)
-    # else:
-    #     plt.savefig("figures/bar",dpi=fig.dpi)
+    return (plt.gcf(), data)
