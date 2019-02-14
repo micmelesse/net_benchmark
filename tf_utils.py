@@ -10,6 +10,7 @@ from tqdm import tqdm
 from natsort import natsorted
 from protobuf_to_dict import protobuf_to_dict
 from tensorflow.python.client import timeline
+from functools import lru_cache
 
 
 def get_event_acc(log_dir):
@@ -165,16 +166,9 @@ def filter_nodes(gpu_stats_grouped, regex):
 #     print(gpu_stats_grouped_fitlered.shape)
     return gpu_stats_grouped_fitlered
 
-
+@lru_cache
 def process_log(log_dir, regex, max_step=None):
     log_dir = os.path.expanduser(log_dir)
-    # gpu_manufacturer = os.path.normpath(log_dir).split(os.sep)[
-    #     2].split("_")[-1]
-    # net_module = os.path.basename(regex)
-    # filename = "{}_{}.pickle".format(gpu_manufacturer, net_module)
-    # if os.path.isfile(filename):
-    #     print("reading cached processed log")
-    #     return pd.read_pickle(filename)
 
     event_acc = get_event_acc(log_dir)
 
