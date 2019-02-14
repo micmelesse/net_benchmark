@@ -215,7 +215,7 @@ def plot_bar_compare(A_data, A_label, B_data, B_label, filename=None, metric="Ti
     data[A_label+"_std"] = A_std
     data[B_label+"_std"] = B_std
     data = data.dropna()
-    data["diff"] = data[A_label+"_mean"]-data[B_label+"_mean"]
+    data["diff"] = data[B_label+"_mean"]-data[A_label+"_mean"]
     data = data.sort_values("diff")
 #     data=data.sample(n=top_n,random_state=random.randint(0,2**32 - 1))
     data = data.head(top_n)
