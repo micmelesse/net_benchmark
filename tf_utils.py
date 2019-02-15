@@ -76,7 +76,7 @@ def save_fig(fig, fig_name, dir_name):
         os.makedirs(dir_name)
 
     plt.savefig(dir_name + "/" + fig_name.replace('/', '--') +
-                ".png", dpi=2*fig.dpi) # double fig dpi to prevent loss of info
+                ".png", dpi=2*fig.dpi)  # double fig dpi to prevent loss of info
 
 
 def get_step_gpu_stats(step_metadata):
@@ -168,7 +168,7 @@ def filter_nodes(gpu_stats_grouped, regex):
 
 
 @lru_cache(maxsize=32)
-def process_metadata(event_acc, regex, max_step=None):
+def process_metadata(event_acc, regex=None, max_step=None):
     if not event_acc.Tags()["run_metadata"]:
         print("no metadata")
         return
@@ -183,8 +183,11 @@ def process_metadata(event_acc, regex, max_step=None):
         step_metadata = event_acc.RunMetadata(step_id)
         step_gpu_stats_all = get_step_gpu_stats(step_metadata)
         step_gpu_stats_grouped = group_nodes(step_gpu_stats_all)
-        step_gpu_stats_grouped_filtered = filter_nodes(
-            step_gpu_stats_grouped, regex)
+        if regex:
+            step_gpu_stats_grouped_filtered = filter_nodes(
+                step_gpu_stats_grouped, regex)
+        else:
+            step_gpu_stats_grouped_filtered = step_gpu_stats_grouped
         df_dict[step_id] = scalarify(step_gpu_stats_grouped_filtered)
 
     ret = pd.Panel(df_dict)
