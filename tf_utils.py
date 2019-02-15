@@ -76,7 +76,7 @@ def save_fig(fig, fig_name, dir_name):
         os.makedirs(dir_name)
 
     plt.savefig(dir_name + "/" + fig_name.replace('/', '--') +
-                ".png", dpi=fig.dpi)
+                ".png", dpi=2*fig.dpi) # double fig dpi to prevent loss of info
 
 
 def get_step_gpu_stats(step_metadata):
@@ -191,7 +191,7 @@ def process_metadata(event_acc, regex, max_step=None):
     return ret
 
 
-def plot_bar_compare(A_data, A_label, B_data, B_label, filename=None, metric="Time", top_n=-1):
+def plot_bar_compare(A_data, A_label, B_data, B_label, metric="Time", top_n=-1):
     min_steps = A_data.shape[0] if A_data.shape[0] <= B_data.shape[0] else B_data.shape[0]
 
     def get_mean_and_std(data):
