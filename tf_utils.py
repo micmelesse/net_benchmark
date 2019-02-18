@@ -194,11 +194,13 @@ def process_metadata(event_acc, regex=None, max_step=None):
     return ret
 
 
-def plot_bar_compare(A_data, A_label, B_data, B_label, metric="Time", top_n=-1):
+def plot_bar_compare(A_data, A_label, B_data, B_label, metric="time", top_n=5):
     min_steps = A_data.shape[0] if A_data.shape[0] <= B_data.shape[0] else B_data.shape[0]
+    min_steps -= 1  # last step might be corrupted
 
     def get_mean_and_std(data):
-        ret = (data[:, :, "all_end_rel_micros"]).iloc[0:min_steps, :]
+        if metric.lower() == "time":
+            ret = (data[:, :, "all_end_rel_micros"]).iloc[0:min_steps, :]
         ret_mean = ret.mean(axis=1)
         ret_std = ret.std(axis=1)
         return ret_mean, ret_std
@@ -215,21 +217,24 @@ def plot_bar_compare(A_data, A_label, B_data, B_label, metric="Time", top_n=-1):
     data["diff"] = data[B_label+"_mean"]-data[A_label+"_mean"]
     data = data.sort_values("diff")
 #     data=data.sample(n=top_n,random_state=random.randint(0,2**32 - 1))
-    data = data.head(top_n)
+    data_head = data.head(top_n)
 
-    ind = np.arange(len(data.index))
+    ind = np.arange(len(data_head.index))
     width = 0.4  # the width of the bars
 
     plt.figure(figsize=(16, 9))
     ax = plt.gca()
-    ax.barh(ind - width/2, data[A_label+"_mean"], width,
-            color='Red', label=A_label, xerr=data[A_label+"_std"])
-    ax.barh(ind + width/2,  data[B_label+"_mean"], width,
-            color='Green', label=B_label, xerr=data[B_label+"_std"])
+    ax.barh(ind - width/2, data_head[A_label+"_mean"], width,
+            color='Red', label=A_label, xerr=data_head[A_label+"_std"])
+    ax.barh(ind + width/2,  data_head[B_label+"_mean"], width,
+            color='Green', label=B_label, xerr=data_head[B_label+"_std"])
     ax.legend()
     ax.invert_yaxis()
-    plt.yticks(ind, data.index.tolist(), rotation='horizontal', fontsize=10)
-    plt.title(u"Time in {}s".format(u"\u03BC"))
+    plt.yticks(ind, data_head.index.tolist(),
+               rotation='horizontal', fontsize=10)
     plt.tight_layout()
+
+    if metric.lower() == "time":
+        plt.title("Time in micro seconds")
 
     return (plt.gcf(), data)
