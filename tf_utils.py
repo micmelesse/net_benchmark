@@ -194,7 +194,7 @@ def process_metadata(event_acc, regex=None, max_step=None):
     return ret
 
 
-def plot_bar_compare(A_data, A_label, B_data, B_label, metric="time", top_n=5):
+def plot_bar_compare(A_data, A_label, B_data, B_label, metric="time", top_n=5, ascending=True):
     min_steps = A_data.shape[0] if A_data.shape[0] <= B_data.shape[0] else B_data.shape[0]
     min_steps -= 1  # last step might be corrupted
 
@@ -215,7 +215,7 @@ def plot_bar_compare(A_data, A_label, B_data, B_label, metric="time", top_n=5):
     data[B_label+"_std"] = B_std
     data = data.dropna()
     data["diff"] = data[B_label+"_mean"]-data[A_label+"_mean"]
-    data = data.sort_values("diff")
+    data = data.sort_values("diff", ascending=ascending)
 #     data=data.sample(n=top_n,random_state=random.randint(0,2**32 - 1))
     data_head = data.head(top_n)
 
