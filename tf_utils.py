@@ -167,13 +167,13 @@ def filter_nodes(gpu_stats_grouped, regex):
     return gpu_stats_grouped_fitlered
 
 
-def process_metadata(event_acc, regex=None, max_step=None):
+def process_metadata(event_acc, regex=None, step_count=None):
     if not event_acc.Tags()["run_metadata"]:
         print("no metadata")
         return
 
-    if max_step:
-        metadata_list = natsorted(event_acc.Tags()["run_metadata"])[:max_step]
+    if step_count:
+        metadata_list = natsorted(event_acc.Tags()["run_metadata"])[:step_count]
     else:
         metadata_list = natsorted(event_acc.Tags()["run_metadata"])
 
@@ -212,6 +212,7 @@ def plot_bar_compare(A_data, A_label, B_data, B_label, metric="time", top_n=5, a
     data[B_label+"_mean"] = B_mean
     data[A_label+"_std"] = A_std
     data[B_label+"_std"] = B_std
+    data_withna=data
     data = data.dropna()
     data["diff"] = data[B_label+"_mean"]-data[A_label+"_mean"]
     data = data.sort_values("diff", ascending=ascending)
@@ -236,4 +237,4 @@ def plot_bar_compare(A_data, A_label, B_data, B_label, metric="time", top_n=5, a
     if metric.lower() == "time":
         plt.title("Time in micro seconds")
 
-    return (plt.gcf(), data)
+    return (plt.gcf(), data_withna)
