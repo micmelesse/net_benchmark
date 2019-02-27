@@ -163,9 +163,11 @@ def scalarify(df):
 
 def filter_nodes(gpu_stats_grouped, regex):
     gpu_stats_grouped_fitlered = gpu_stats_grouped.filter(regex=regex, axis=0)
-#     print(gpu_stats_grouped_fitlered.shape)
     return gpu_stats_grouped_fitlered
 
+def filter_metadata(metadata, regex):
+    metadata_fitlered = metadata.filter(regex=regex, axis=1)
+    return metadata_fitlered
 
 def process_metadata(event_acc, regex=None, step_count=None):
     if not event_acc.Tags()["run_metadata"]:
