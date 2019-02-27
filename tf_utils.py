@@ -165,11 +165,16 @@ def filter_nodes(gpu_stats_grouped, regex):
     gpu_stats_grouped_fitlered = gpu_stats_grouped.filter(regex=regex, axis=0)
     return gpu_stats_grouped_fitlered
 
+
 def filter_metadata(metadata, regex):
     metadata_fitlered = metadata.filter(regex=regex, axis=1)
     return metadata_fitlered
 
+
 def process_metadata(event_acc, regex=None, step_count=None):
+    if type(event_acc) == str:
+        event_acc = get_event_acc(event_acc)
+
     if not event_acc.Tags()["run_metadata"]:
         print("no metadata")
         return
@@ -228,9 +233,9 @@ def plot_bar_compare(A_data, A_label, B_data, B_label, metric="time", top_n=5, a
     plt.figure(figsize=(16, 9))
     ax = plt.gca()
     ax.barh(ind - width/2, data_head[A_label+"_mean"], width,
-            color='Red', label=A_label, xerr=data_head[A_label+"_std"],snap=False)
+            color='Red', label=A_label, xerr=data_head[A_label+"_std"], snap=False)
     ax.barh(ind + width/2,  data_head[B_label+"_mean"], width,
-            color='Green', label=B_label, xerr=data_head[B_label+"_std"],snap=False)
+            color='Green', label=B_label, xerr=data_head[B_label+"_std"], snap=False)
     ax.legend()
     ax.invert_yaxis()
     plt.yticks(ind, data_head.index.tolist(),
