@@ -173,7 +173,8 @@ def process_metadata(event_acc, regex=None, step_count=None):
         return
 
     if step_count:
-        metadata_list = natsorted(event_acc.Tags()["run_metadata"])[:step_count]
+        metadata_list = natsorted(event_acc.Tags()["run_metadata"])[
+            :step_count]
     else:
         metadata_list = natsorted(event_acc.Tags()["run_metadata"])
 
@@ -199,7 +200,8 @@ def plot_bar_compare(A_data, A_label, B_data, B_label, metric="time", top_n=5, a
 
     def get_mean_and_std(data):
         if metric.lower() == "time":
-            ret = (data[:, :, "all_end_rel_micros"]).iloc[0:min_steps, :]
+            ret = data[:, :, "all_end_rel_micros"]
+            ret = ret.iloc[:, 0:min_steps]
         ret_mean = ret.mean(axis=1)
         ret_std = ret.std(axis=1)
         return ret_mean, ret_std
@@ -212,7 +214,6 @@ def plot_bar_compare(A_data, A_label, B_data, B_label, metric="time", top_n=5, a
     data[B_label+"_mean"] = B_mean
     data[A_label+"_std"] = A_std
     data[B_label+"_std"] = B_std
-    data_withna=data
     data = data.dropna()
     data["diff"] = data[B_label+"_mean"]-data[A_label+"_mean"]
     data = data.sort_values("diff", ascending=ascending)
@@ -237,4 +238,4 @@ def plot_bar_compare(A_data, A_label, B_data, B_label, metric="time", top_n=5, a
     if metric.lower() == "time":
         plt.title("Time in micro seconds")
 
-    return (plt.gcf(), data_withna)
+    return (plt.gcf(), data)
