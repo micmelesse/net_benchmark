@@ -167,7 +167,6 @@ def filter_nodes(gpu_stats_grouped, regex):
     return gpu_stats_grouped_fitlered
 
 
-@lru_cache(maxsize=32)
 def process_metadata(event_acc, regex=None, max_step=None):
     if not event_acc.Tags()["run_metadata"]:
         print("no metadata")
