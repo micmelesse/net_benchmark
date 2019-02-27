@@ -226,9 +226,9 @@ def plot_bar_compare(A_data, A_label, B_data, B_label, metric="time", top_n=5, a
     plt.figure(figsize=(16, 9))
     ax = plt.gca()
     ax.barh(ind - width/2, data_head[A_label+"_mean"], width,
-            color='Red', label=A_label, xerr=data_head[A_label+"_std"])
+            color='Red', label=A_label, xerr=data_head[A_label+"_std"],snap=False)
     ax.barh(ind + width/2,  data_head[B_label+"_mean"], width,
-            color='Green', label=B_label, xerr=data_head[B_label+"_std"])
+            color='Green', label=B_label, xerr=data_head[B_label+"_std"],snap=False)
     ax.legend()
     ax.invert_yaxis()
     plt.yticks(ind, data_head.index.tolist(),
