@@ -205,22 +205,25 @@ def plot_bar_compare(A_data, A_label, B_data, B_label, metric="time", top_n=5, a
     min_steps = A_data.shape[0] if A_data.shape[0] <= B_data.shape[0] else B_data.shape[0]
     min_steps -= 1  # last step might be corrupted
 
-    def get_mean_and_std(data):
+    def calculate_statistics(data):
         if metric.lower() == "time":
             ret = data[:, :, "all_end_rel_micros"]
             ret = ret.iloc[:, 0:min_steps]
         ret_mean = ret.mean(axis=1)
         ret_std = ret.std(axis=1)
-        return ret_mean, ret_std
+        ret_sem = ret.sem(axis=1)
+        return ret_mean, ret_std, ret_sem
 
-    A_mean, A_std = get_mean_and_std(A_data)
-    B_mean, B_std = get_mean_and_std(B_data)
+    A_mean, A_std, A_sem = calculate_statistics(A_data)
+    B_mean, B_std, B_sem = calculate_statistics(B_data)
 
     data = pd.DataFrame()
     data[A_label+"_mean"] = A_mean
     data[B_label+"_mean"] = B_mean
     data[A_label+"_std"] = A_std
     data[B_label+"_std"] = B_std
+    data[A_label+"_sem"] = A_sem
+    data[B_label+"_sem"] = B_sem
     data = data.dropna()
     data["diff"] = data[B_label+"_mean"]-data[A_label+"_mean"]
     data = data.sort_values("diff", ascending=ascending)
@@ -234,9 +237,9 @@ def plot_bar_compare(A_data, A_label, B_data, B_label, metric="time", top_n=5, a
     ax = plt.gca()
     if error_bar:
         ax.barh(ind - width/2, data_head[A_label+"_mean"], width,
-                color='Red', label=A_label, xerr=data_head[A_label+"_std"], snap=False)
+                color='Red', label=A_label, xerr=data_head[A_label+"_sem"], snap=False)
         ax.barh(ind + width/2,  data_head[B_label+"_mean"], width,
-                color='Green', label=B_label, xerr=data_head[B_label+"_std"], snap=False)
+                color='Green', label=B_label, xerr=data_head[B_label+"_sem"], snap=False)
     else:
         ax.barh(ind - width/2, data_head[A_label+"_mean"], width,
                 color='Red', label=A_label, snap=False)
